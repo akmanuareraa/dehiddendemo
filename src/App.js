@@ -4,6 +4,24 @@ import Web3 from "web3";
 import { Biconomy } from "@biconomy/mexa";
 import { useState, useEffect } from "react";
 
+import "@rainbow-me/rainbowkit/styles.css";
+import { getDefaultWallets, RainbowKitProvider } from "@rainbow-me/rainbowkit";
+import {
+  chain,
+  configureChains,
+  createClient,
+  WagmiConfig,
+  useAccount,
+  useContractRead,
+  usePrepareContractWrite,
+  useContractWrite,
+} from "wagmi";
+import { alchemyProvider } from "wagmi/providers/alchemy";
+import { publicProvider } from "wagmi/providers/public";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+
+import Connect from "./Connect";
+
 function App() {
   const [appState, setAppState] = useState({
     storageValue: 0,
@@ -13,8 +31,41 @@ function App() {
     transactionSuccess: "",
   });
 
+  // ===========================================
+  // Rainbowkit Integration
+
+  const { chains, provider, webSocketProvider } = configureChains(
+    [chain.polygonMumbai],
+    [
+      alchemyProvider({ apiKey: "s6gbstz7HGLANDFZbLHg1f8DlKrNxR6u" }),
+      publicProvider(),
+    ]
+  );
+
+  const { connectors } = getDefaultWallets({
+    appName: "GasLess Mint App",
+    chains,
+  });
+
+  const wagmiClient = createClient({
+    autoConnect: true,
+    connectors,
+    provider,
+    webSocketProvider,
+  });
+
+  // const { config } = usePrepareContractWrite({
+  //   addressOrName: "0x28Cc06715C0Bb14D4F270c22fCEDc8131eA49FBe",
+  //   contractInterface: JSON.parse(nftabi),
+  //   functionName: "mint",
+  // });
+
+  // const { write: mint, isSuccess } = useContractWrite(config);
+
+  // ===========================================
+
   const biconomy = new Biconomy(window.ethereum, {
-    apiKey: "6Fk2o57Xc.c80ab72b-7b71-4de5-9c4b-32a0ceef9f4f",
+    apiKey: "wCszT0tiR.2b9773ed-c909-4d70-bb48-15cf305ac6e5",
     debug: true,
   });
 
@@ -27,7 +78,7 @@ function App() {
       await window.ethereum.enable();
       contract = new web3.eth.Contract(
         JSON.parse(nftabi),
-        "0x7E3C5406d852C45b63Ab70E1E5f3aeAC1bE34147"
+        "0x28Cc06715C0Bb14D4F270c22fCEDc8131eA49FBe"
       );
       console.log("Bicon Ready");
       let accounts = await web3.eth.getAccounts();
@@ -37,42 +88,6 @@ function App() {
       // Handle error while initializing mexa
       console.log(error);
     });
-
-  // useEffect(() => {
-  //   try {
-  //     let web3 = new Web3(window.ethereum);
-  //     biconomy
-  //       .onEvent(biconomy.READY, async () => {
-  //         const bicoweb3 = new Web3(biconomy);
-  //         const contract = new bicoweb3.eth.Contract(
-  //           JSON.parse(nftabi),
-  //           "0x53854205072224425B02E82d6C396CAc2Ac14484"
-  //         );
-  //         const accounts = await web3.eth.getAccounts();
-  //         setAppState((prevState) => {
-  //           return {
-  //             ...prevState,
-  //             web3: web3,
-  //             bicoweb3: bicoweb3,
-  //             account: accounts[0],
-  //             accounts: accounts,
-  //             contract: contract,
-  //             bicoweb3: bicoweb3,
-  //           };
-  //         });
-  //       })
-  //       .onEvent(biconomy.ERROR, (error, message) => {
-  //         console.log("Biconomy Initialization Error");
-  //       });
-
-  //     console.log("State is", appState);
-  //   } catch (error) {
-  //     alert(
-  //       "Failed to load web3, accounts, or contract. Check console for details."
-  //     );
-  //     console.error(error);
-  //   }
-  // }, []);
 
   const mintnft = () => {
     console.log("Mint called with", appState, contract, account);
@@ -98,10 +113,22 @@ function App() {
 
   return (
     <>
-      <div className="text-5xl">Hello</div>;
-      <button className="btn" onClick={() => mintnft()}>
-        Mint
-      </button>
+      <WagmiConfig client={wagmiClient}>
+        <RainbowKitProvider chains={chains}>
+          <div className="flex flex-col items-center space-y-6 p-8">
+            <div className="text-5xl text-white font-bold">GasLess NFT Mint</div>
+            <button className="btn bg-orange-500 text-black hover:bg-orange-500/50" onClick={() => mintnft()}>
+              Mint NFT
+            </button>
+            {/* <button className="btn" onClick={() => mintnft()}>
+              Mint with Rainbowkit
+            </button> */}
+            <ConnectButton chainStatus="name" />
+
+            <Connect />
+          </div>
+        </RainbowKitProvider>
+      </WagmiConfig>
     </>
   );
 }
